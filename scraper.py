@@ -15,7 +15,10 @@ from typing import Optional
 
 import httpx
 from bs4 import BeautifulSoup
-from fake_useragent import UserAgent
+try:
+    from fake_useragent import UserAgent
+except ImportError:
+    UserAgent = None
 
 import config
 
@@ -63,10 +66,12 @@ def is_milano(text: str) -> bool:
 
 def get_client() -> httpx.Client:
     """Crea un client HTTP con user-agent random."""
-    try:
-        ua = UserAgent().random
-    except Exception:
-        ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+    if UserAgent is not None:
+        try:
+            ua = UserAgent().random
+        except Exception:
+            pass
     
     return httpx.Client(
         headers={
