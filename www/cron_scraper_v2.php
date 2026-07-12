@@ -6,7 +6,7 @@
 
 // Previeni esecuzione diretta via browser (solo cron o CLI)
 // Per test: visita con ?force=1
-if (php_sapi_name() !== 'cli' && !isset($_GET['force']) && !isset($_GET['debug'])) {
+if (php_sapi_name() !== 'cli' && !isset($_GET['force'])) {
     header('HTTP/1.1 403 Forbidden');
     die('Questo script è eseguito via Cron Job. Aggiungi ?force=1 per test manuale.');
 }
@@ -14,10 +14,7 @@ if (php_sapi_name() !== 'cli' && !isset($_GET['force']) && !isset($_GET['debug']
 // Non limitare il tempo di esecuzione
 set_time_limit(300);
 error_reporting(E_ALL);
-ini_set('display_errors', 0);
-
-\$DEBUG = isset(\$_GET['debug']) && \$_GET['debug'] == 1;
-if (\$DEBUG) @unlink(__DIR__ . '/debug_html.log'); // Non mostrare errori a schermo
+ini_set('display_errors', 0); // Non mostrare errori a schermo
 
 require_once __DIR__ . '/config.php';
 
