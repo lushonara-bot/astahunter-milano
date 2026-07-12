@@ -3,107 +3,114 @@
 // AstaHunter Milano - Dashboard Completa
 // ============================================
 require_once __DIR__ . '/config.php';
-\$db = getDB();
+$db = getDB();
 
 // ====== Gestione salvataggio filtri ======
-if (\$_SERVER['REQUEST_METHOD'] === 'POST' && isset(\$_POST['action'])) {
-    if (\$_POST['action'] === 'salva_filtro') {
-        \$nome = \$_POST['nome_filtro'] ?? 'Mio Filtro';
-        \$prezzo_min = \$_POST['prezzo_min'] ?: null;
-        \$prezzo_max = \$_POST['prezzo_max'] ?: null;
-        \$zone = \$_POST['zone'] ?? null;
-        \$tipologie = \$_POST['tipologie'] ?? null;
-        \$stmt = \$db->prepare("INSERT INTO alert_filtri (nome, citta, zone, prezzo_min, prezzo_max, tipologie) VALUES (?, 'Milano', ?, ?, ?, ?)");
-        \$stmt->bind_param("ssdds", \$nome, \$zone, \$prezzo_min, \$prezzo_max, \$tipologie);
-        \$stmt->execute();
-        \$msg_success = \$nome ? 'Filtro "'.htmlspecialchars(\$nome).'" salvato!' : 'Filtro salvato!';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if ($_POST['action'] === 'salva_filtro') {
+        $nome = $_POST['nome_filtro'] ?? 'Mio Filtro';
+        $prezzo_min = $_POST['prezzo_min'] ?: null;
+        $prezzo_max = $_POST['prezzo_max'] ?: null;
+        $zone = $_POST['zone'] ?? null;
+        $tipologie = $_POST['tipologie'] ?? null;
+        $stmt = $db->prepare("INSERT INTO alert_filtri (nome, citta, zone, prezzo_min, prezzo_max, tipologie) VALUES (?, 'Milano', ?, ?, ?, ?)");
+        $stmt->bind_param("ssdds", $nome, $zone, $prezzo_min, $prezzo_max, $tipologie);
+        $stmt->execute();
+        $msg_success = $nome ? 'Filtro "'.htmlspecialchars($nome).'" salvato!' : 'Filtro salvato!';
     }
-    if (\$_POST['action'] === 'elimina_filtro') {
-        \$db->query("DELETE FROM alert_filtri WHERE id = " . intval(\$_POST['filtro_id']));
+    if ($_POST['action'] === 'elimina_filtro') {
+        $db->query("DELETE FROM alert_filtri WHERE id = " . intval($_POST['filtro_id']));
     }
 }
 
 // ====== Statistiche ======
-\$totale = \$db->query("SELECT COUNT(*) as n FROM aste")->fetch_assoc()['n'];
-\$nuove_24h = \$db->query("SELECT COUNT(*) as n FROM aste WHERE created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)")->fetch_assoc()['n'];
-\$in_scadenza = \$db->query("SELECT COUNT(*) as n FROM aste WHERE data_asta >= CURDATE()")->fetch_assoc()['n'];
-\$oggi = \$db->query("SELECT COUNT(*) as n FROM aste WHERE DATE(created_at) = CURDATE()")->fetch_assoc()['n'];
+// ====== Statistiche (con controllo tabelle) ======
+$tables_ok = $db->query("SHOW TABLES LIKE 'aste'")->num_rows > 0;
+if ($tables_ok) {
+    $totale = $db->query("SELECT COUNT(*) as n FROM aste")->fetch_assoc()['n'] ?? 0;
+    $nuove_24h = $db->query("SELECT COUNT(*) as n FROM aste WHERE created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)")->fetch_assoc()['n'] ?? 0;
+    $in_scadenza = $db->query("SELECT COUNT(*) as n FROM aste WHERE data_asta >= CURDATE()")->fetch_assoc()['n'] ?? 0;
+    $oggi = $db->query("SELECT COUNT(*) as n FROM aste WHERE DATE(created_at) = CURDATE()")->fetch_assoc()['n'] ?? 0;
+} else {
+    $totale = $nuove_24h = $in_scadenza = $oggi = 0;
+    $tables_ok = false;
+}
 
 // ====== Filtri attivi ======
-\$filtri = \$db->query("SELECT * FROM alert_filtri WHERE attivo = 1 ORDER BY created_at DESC")->fetch_all(MYSQLI_ASSOC);
+$filtri = $db->query("SELECT * FROM alert_filtri WHERE attivo = 1 ORDER BY created_at DESC")->fetch_all(MYSQLI_ASSOC);
 
 // ====== Parametri dalla URL ======
-\$f_zona = \$_GET['zona'] ?? '';
-\$f_tipo = \$_GET['tipo'] ?? '';
-\$f_prezzo_min = \$_GET['prezzo_min'] ?? '';
-\$f_prezzo_max = \$_GET['prezzo_max'] ?? '';
-\$f_data_da = \$_GET['data_da'] ?? '';
-\$f_data_a = \$_GET['data_a'] ?? '';
-\$f_order = \$_GET['order'] ?? 'created_at DESC';
-\$f_page = max(1, intval(\$_GET['page'] ?? 1));
-\$per_page = 50;
-\$offset = (\$f_page - 1) * \$per_page;
+$f_zona = $_GET['zona'] ?? '';
+$f_tipo = $_GET['tipo'] ?? '';
+$f_prezzo_min = $_GET['prezzo_min'] ?? '';
+$f_prezzo_max = $_GET['prezzo_max'] ?? '';
+$f_data_da = $_GET['data_da'] ?? '';
+$f_data_a = $_GET['data_a'] ?? '';
+$f_order = $_GET['order'] ?? 'created_at DESC';
+$f_page = max(1, intval($_GET['page'] ?? 1));
+$per_page = 50;
+$offset = ($f_page - 1) * $per_page;
 
 // ====== Costruisci query ======
-\$where = ["1=1"];
-\$params = [];
-\$types = "";
+$where = ["1=1"];
+$params = [];
+$types = "";
 
-if (\$f_zona) {
-    \$where[] = "(zona LIKE ? OR indirizzo LIKE ?)";
-    \$params[] = "%\$f_zona%"; \$params[] = "%\$f_zona%";
-    \$types .= "ss";
+if ($f_zona) {
+    $where[] = "(zona LIKE ? OR indirizzo LIKE ?)";
+    $params[] = "%$f_zona%"; $params[] = "%$f_zona%";
+    $types .= "ss";
 }
-if (\$f_tipo) {
-    \$where[] = "tipo_immobile = ?";
-    \$params[] = \$f_tipo;
-    \$types .= "s";
+if ($f_tipo) {
+    $where[] = "tipo_immobile = ?";
+    $params[] = $f_tipo;
+    $types .= "s";
 }
-if (\$f_prezzo_min) {
-    \$where[] = "prezzo_base >= ?";
-    \$params[] = floatval(\$f_prezzo_min);
-    \$types .= "d";
+if ($f_prezzo_min) {
+    $where[] = "prezzo_base >= ?";
+    $params[] = floatval($f_prezzo_min);
+    $types .= "d";
 }
-if (\$f_prezzo_max) {
-    \$where[] = "prezzo_base <= ?";
-    \$params[] = floatval(\$f_prezzo_max);
-    \$types .= "d";
+if ($f_prezzo_max) {
+    $where[] = "prezzo_base <= ?";
+    $params[] = floatval($f_prezzo_max);
+    $types .= "d";
 }
-if (\$f_data_da) {
-    \$where[] = "data_asta >= ?";
-    \$params[] = \$f_data_da;
-    \$types .= "s";
+if ($f_data_da) {
+    $where[] = "data_asta >= ?";
+    $params[] = $f_data_da;
+    $types .= "s";
 }
-if (\$f_data_a) {
-    \$where[] = "data_asta <= ?";
-    \$params[] = \$f_data_a;
-    \$types .= "s";
+if ($f_data_a) {
+    $where[] = "data_asta <= ?";
+    $params[] = $f_data_a;
+    $types .= "s";
 }
 
-\$where_clause = implode(" AND ", \$where);
+$where_clause = implode(" AND ", $where);
 
 // Conteggio totale
-\$count_sql = \$db->prepare("SELECT COUNT(*) as n FROM aste WHERE \$where_clause");
-if (count(\$params) > 0) \$count_sql->bind_param(\$types, ...\$params);
-\$count_sql->execute();
-\$totale_filtrato = \$count_sql->get_result()->fetch_assoc()['n'];
-\$count_sql->close();
+$count_sql = $db->prepare("SELECT COUNT(*) as n FROM aste WHERE $where_clause");
+if (count($params) > 0) $count_sql->bind_param($types, ...$params);
+$count_sql->execute();
+$totale_filtrato = $count_sql->get_result()->fetch_assoc()['n'];
+$count_sql->close();
 
 // Query principale
-\$allowed_orders = ['created_at DESC', 'created_at ASC', 'prezzo_base ASC', 'prezzo_base DESC', 'data_asta ASC', 'data_asta DESC'];
-if (!in_array(\$f_order, \$allowed_orders)) \$f_order = 'created_at DESC';
+$allowed_orders = ['created_at DESC', 'created_at ASC', 'prezzo_base ASC', 'prezzo_base DESC', 'data_asta ASC', 'data_asta DESC'];
+if (!in_array($f_order, $allowed_orders)) $f_order = 'created_at DESC';
 
-\$sql = "SELECT a.*, f.nome as fonte_nome FROM aste a LEFT JOIN fonti f ON a.fonte_id = f.id WHERE \$where_clause ORDER BY \$f_order LIMIT ? OFFSET ?";
-\$params[] = \$per_page; \$params[] = \$offset;
-\$types .= "ii";
+$sql = "SELECT a.*, f.nome as fonte_nome FROM aste a LEFT JOIN fonti f ON a.fonte_id = f.id WHERE $where_clause ORDER BY $f_order LIMIT ? OFFSET ?";
+$params[] = $per_page; $params[] = $offset;
+$types .= "ii";
 
-\$stmt = \$db->prepare(\$sql);
-if (count(\$params) > 0) \$stmt->bind_param(\$types, ...\$params);
-\$stmt->execute();
-\$aste = \$stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-\$stmt->close();
+$stmt = $db->prepare($sql);
+if (count($params) > 0) $stmt->bind_param($types, ...$params);
+$stmt->execute();
+$aste = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
 
-\$pagine_totali = ceil(\$totale_filtrato / \$per_page);
+$pagine_totali = ceil($totale_filtrato / $per_page);
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -166,10 +173,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="header">
 <h1>🏠 Asta<span>Hunter</span> Milano</h1>
 <div class="stats">
-<div class="stat"><div class="n"><?= \$totale ?></div><div class="l">Totali</div></div>
-<div class="stat hot"><div class="n"><?= \$nuove_24h ?></div><div class="l">Nuove 24h</div></div>
-<div class="stat"><div class="n"><?= \$in_scadenza ?></div><div class="l">In scadenza</div></div>
-<div class="stat"><div class="n"><?= \$oggi ?></div><div class="l">Oggi</div></div>
+<div class="stat"><div class="n"><?= $totale ?></div><div class="l">Totali</div></div>
+<div class="stat hot"><div class="n"><?= $nuove_24h ?></div><div class="l">Nuove 24h</div></div>
+<div class="stat"><div class="n"><?= $in_scadenza ?></div><div class="l">In scadenza</div></div>
+<div class="stat"><div class="n"><?= $oggi ?></div><div class="l">Oggi</div></div>
 </div>
 </div>
 
@@ -180,18 +187,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="card filters">
 <h3>🔍 Filtri</h3>
 <form method="GET">
-<input type="text" name="zona" placeholder="Zona (es. Navigli, Centro)..." value="<?= htmlspecialchars(\$f_zona) ?>">
+<input type="text" name="zona" placeholder="Zona (es. Navigli, Centro)..." value="<?= htmlspecialchars($f_zona) ?>">
 <select name="tipo">
 <option value="">Tutti i tipi</option>
-<?php foreach(['appartamento','villa','box','negozio','ufficio','capannone','terreno','altro'] as \$t): ?>
-<option value="<?= \$t ?>" <?= \$f_tipo==\$t?'selected':'' ?>><?= ucfirst(\$t) ?></option>
+<?php foreach(['appartamento','villa','box','negozio','ufficio','capannone','terreno','altro'] as $t): ?>
+<option value="<?= $t ?>" <?= $f_tipo==$t?'selected':'' ?>><?= ucfirst($t) ?></option>
 <?php endforeach; ?>
 </select>
-<input type="number" name="prezzo_min" placeholder="Prezzo min €" value="<?= htmlspecialchars(\$f_prezzo_min) ?>">
-<input type="number" name="prezzo_max" placeholder="Prezzo max €" value="<?= htmlspecialchars(\$f_prezzo_max) ?>">
+<input type="number" name="prezzo_min" placeholder="Prezzo min €" value="<?= htmlspecialchars($f_prezzo_min) ?>">
+<input type="number" name="prezzo_max" placeholder="Prezzo max €" value="<?= htmlspecialchars($f_prezzo_max) ?>">
 <label style="font-size:.75em;color:var(--muted)">Data asta da:</label>
-<input type="date" name="data_da" value="<?= htmlspecialchars(\$f_data_da) ?>">
-<input type="date" name="data_a" value="<?= htmlspecialchars(\$f_data_a) ?>">
+<input type="date" name="data_da" value="<?= htmlspecialchars($f_data_da) ?>">
+<input type="date" name="data_a" value="<?= htmlspecialchars($f_data_a) ?>">
 <button type="submit">🔍 Applica Filtri</button>
 <a href="?" style="display:block;text-align:center;margin-top:8px;font-size:.8em;color:var(--muted)">✕ Azzera tutti i filtri</a>
 </form>
@@ -202,8 +209,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <h3>🔔 I Miei Interessi</h3>
 <p style="font-size:.75em;color:var(--muted);margin-bottom:10px">Salva criteri e ricevi email per nuove aste</p>
 
-<?php if(!empty(\$msg_success)): ?>
-<div class="msg">✅ <?= \$msg_success ?></div>
+<?php if(!empty($msg_success)): ?>
+<div class="msg">✅ <?= $msg_success ?></div>
 <?php endif; ?>
 
 <form method="POST">
@@ -216,22 +223,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <button type="submit">💾 Salva Interesse</button>
 </form>
 
-<?php if(!empty(\$filtri)): ?>
+<?php if(!empty($filtri)): ?>
 <div style="margin-top:12px">
 <strong style="font-size:.8em">Interessi salvati:</strong>
-<?php foreach(\$filtri as \$f): ?>
+<?php foreach($filtri as $f): ?>
 <div class="filtro-salvato">
 <form method="POST" style="display:inline">
 <input type="hidden" name="action" value="elimina_filtro">
-<input type="hidden" name="filtro_id" value="<?= \$f['id'] ?>">
+<input type="hidden" name="filtro_id" value="<?= $f['id'] ?>">
 <button type="submit" class="del" title="Elimina">🗑️</button>
 </form>
-<div class="fn"><?= htmlspecialchars(\$f['nome']) ?></div>
+<div class="fn"><?= htmlspecialchars($f['nome']) ?></div>
 <div class="fd">
-<?php if(\$f['prezzo_min']||\$f['prezzo_max']): ?>
-💰 €<?= \$f['prezzo_min']?:'0' ?> - €<?= \$f['prezzo_max']?:'∞' ?><br>
+<?php if($f['prezzo_min']||$f['prezzo_max']): ?>
+💰 €<?= $f['prezzo_min']?:'0' ?> - €<?= $f['prezzo_max']?:'∞' ?><br>
 <?php endif; ?>
-<?php if(\$f['zone']): ?>📍 <?= htmlspecialchars(\$f['zone']) ?><?php endif; ?>
+<?php if($f['zone']): ?>📍 <?= htmlspecialchars($f['zone']) ?><?php endif; ?>
 </div>
 </div>
 <?php endforeach; ?>
@@ -245,18 +252,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <!-- Barra ordinamento -->
 <div class="order-bar">
 <span style="color:var(--muted);font-size:.8em;padding:6px 0">Ordina:</span>
-<a href="?<?= http_build_query(array_merge(\$_GET, ['order'=>'created_at DESC','page'=>1])) ?>" class="<?= \$f_order=='created_at DESC'?'active':'' ?>">🆕 Più nuovi</a>
-<a href="?<?= http_build_query(array_merge(\$_GET, ['order'=>'created_at ASC','page'=>1])) ?>" class="<?= \$f_order=='created_at ASC'?'active':'' ?>">📅 Più vecchi</a>
-<a href="?<?= http_build_query(array_merge(\$_GET, ['order'=>'prezzo_base ASC','page'=>1])) ?>" class="<?= strpos(\$f_order,'prezzo_base ASC')!==false?'active':'' ?>">💰 Prezzo ↑</a>
-<a href="?<?= http_build_query(array_merge(\$_GET, ['order'=>'prezzo_base DESC','page'=>1])) ?>" class="<?= strpos(\$f_order,'prezzo_base DESC')!==false?'active':'' ?>">💰 Prezzo ↓</a>
-<a href="?<?= http_build_query(array_merge(\$_GET, ['order'=>'data_asta ASC','page'=>1])) ?>" class="<?= strpos(\$f_order,'data_asta ASC')!==false?'active':'' ?>">⏰ Asta vicina</a>
+<a href="?<?= http_build_query(array_merge($_GET, ['order'=>'created_at DESC','page'=>1])) ?>" class="<?= $f_order=='created_at DESC'?'active':'' ?>">🆕 Più nuovi</a>
+<a href="?<?= http_build_query(array_merge($_GET, ['order'=>'created_at ASC','page'=>1])) ?>" class="<?= $f_order=='created_at ASC'?'active':'' ?>">📅 Più vecchi</a>
+<a href="?<?= http_build_query(array_merge($_GET, ['order'=>'prezzo_base ASC','page'=>1])) ?>" class="<?= strpos($f_order,'prezzo_base ASC')!==false?'active':'' ?>">💰 Prezzo ↑</a>
+<a href="?<?= http_build_query(array_merge($_GET, ['order'=>'prezzo_base DESC','page'=>1])) ?>" class="<?= strpos($f_order,'prezzo_base DESC')!==false?'active':'' ?>">💰 Prezzo ↓</a>
+<a href="?<?= http_build_query(array_merge($_GET, ['order'=>'data_asta ASC','page'=>1])) ?>" class="<?= strpos($f_order,'data_asta ASC')!==false?'active':'' ?>">⏰ Asta vicina</a>
 </div>
 
 <div style="font-size:.8em;color:var(--muted);margin-bottom:10px">
-<?= \$totale_filtrato ?> aste trovate<?= empty(array_filter([\$f_zona,\$f_tipo,\$f_prezzo_min,\$f_prezzo_max])) ? ' (totale)' : ' (filtrate)' ?>
+<?= $totale_filtrato ?> aste trovate<?= empty(array_filter([$f_zona,$f_tipo,$f_prezzo_min,$f_prezzo_max])) ? ' (totale)' : ' (filtrate)' ?>
 </div>
 
-<?php if(empty(\$aste)): ?>
+<?php if(empty($aste)): ?>
 <div class="empty-state">
 <div class="icon">📭</div>
 <h2>Nessuna asta trovata</h2>
@@ -264,43 +271,43 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </div>
 <?php else: ?>
 
-<?php foreach(\$aste as \$a): ?>
-<?php \$is_new = \$a['is_nuovo'] == 1 && strtotime(\$a['created_at']) > strtotime('-48 hours'); ?>
-<div class="asta-item <?= \$is_new ? 'new' : '' ?>">
-<?php if(\$is_new): ?><div class="badge-new">NUOVO</div><?php endif; ?>
+<?php foreach($aste as $a): ?>
+<?php $is_new = $a['is_nuovo'] == 1 && strtotime($a['created_at']) > strtotime('-48 hours'); ?>
+<div class="asta-item <?= $is_new ? 'new' : '' ?>">
+<?php if($is_new): ?><div class="badge-new">NUOVO</div><?php endif; ?>
 <div class="row1">
-<div class="titolo"><?= htmlspecialchars(\$a['titolo'] ?: 'Asta Immobiliare') ?></div>
-<div class="prezzo"><?= \$a['prezzo_base'] ? '€ '.number_format(\$a['prezzo_base'], 0, ',', '.') : 'N/D' ?></div>
+<div class="titolo"><?= htmlspecialchars($a['titolo'] ?: 'Asta Immobiliare') ?></div>
+<div class="prezzo"><?= $a['prezzo_base'] ? '€ '.number_format($a['prezzo_base'], 0, ',', '.') : 'N/D' ?></div>
 </div>
-<?php if(\$a['zona']): ?><span class="zona-tag">📍 <?= htmlspecialchars(\$a['zona']) ?></span><?php endif; ?>
+<?php if($a['zona']): ?><span class="zona-tag">📍 <?= htmlspecialchars($a['zona']) ?></span><?php endif; ?>
 <div class="meta">
-<?php if(\$a['tipo_immobile']): ?><span>🏠 <?= ucfirst(\$a['tipo_immobile']) ?></span><?php endif; ?>
-<?php if(\$a['metri_quadri']): ?><span>📐 <?= \$a['metri_quadri'] ?> m²</span><?php endif; ?>
-<?php if(\$a['num_vani']): ?><span>🚪 <?= \$a['num_vani'] ?> vani</span><?php endif; ?>
-<?php if(\$a['data_asta']): ?><span>📅 <?= date('d/m/Y', strtotime(\$a['data_asta'])) ?></span><?php endif; ?>
-<?php if(\$a['tribunale']): ?><span>⚖️ <?= htmlspecialchars(\$a['tribunale']) ?></span><?php endif; ?>
+<?php if($a['tipo_immobile']): ?><span>🏠 <?= ucfirst($a['tipo_immobile']) ?></span><?php endif; ?>
+<?php if($a['metri_quadri']): ?><span>📐 <?= $a['metri_quadri'] ?> m²</span><?php endif; ?>
+<?php if($a['num_vani']): ?><span>🚪 <?= $a['num_vani'] ?> vani</span><?php endif; ?>
+<?php if($a['data_asta']): ?><span>📅 <?= date('d/m/Y', strtotime($a['data_asta'])) ?></span><?php endif; ?>
+<?php if($a['tribunale']): ?><span>⚖️ <?= htmlspecialchars($a['tribunale']) ?></span><?php endif; ?>
 </div>
-<?php if(\$a['indirizzo']): ?>
-<div style="font-size:.85em;margin-top:5px;color:var(--muted)">📍 <?= htmlspecialchars(\$a['indirizzo']) ?></div>
+<?php if($a['indirizzo']): ?>
+<div style="font-size:.85em;margin-top:5px;color:var(--muted)">📍 <?= htmlspecialchars($a['indirizzo']) ?></div>
 <?php endif; ?>
-<div class="fonte">Fonte: <?= htmlspecialchars(\$a['fonte_nome'] ?? 'Sconosciuta') ?> • Aggiunto il <?= date('d/m/Y H:i', strtotime(\$a['created_at'])) ?></div>
-<?php if(\$a['url_originale']): ?>
-<div class="azioni"><a href="<?= htmlspecialchars(\$a['url_originale']) ?>" target="_blank">🔗 Vedi annuncio originale →</a></div>
+<div class="fonte">Fonte: <?= htmlspecialchars($a['fonte_nome'] ?? 'Sconosciuta') ?> • Aggiunto il <?= date('d/m/Y H:i', strtotime($a['created_at'])) ?></div>
+<?php if($a['url_originale']): ?>
+<div class="azioni"><a href="<?= htmlspecialchars($a['url_originale']) ?>" target="_blank">🔗 Vedi annuncio originale →</a></div>
 <?php endif; ?>
 </div>
 <?php endforeach; ?>
 
-<?php if(\$pagine_totali > 1): ?>
+<?php if($pagine_totali > 1): ?>
 <div class="pagination">
-<?php for(\$p=1; \$p<=min(\$pagine_totali,20); \$p++): ?>
-<?php if(\$p == \$f_page): ?>
-<span class="current"><?= \$p ?></span>
+<?php for($p=1; $p<=min($pagine_totali,20); $p++): ?>
+<?php if($p == $f_page): ?>
+<span class="current"><?= $p ?></span>
 <?php else: ?>
-<a href="?<?= http_build_query(array_merge(\$_GET, ['page'=>\$p])) ?>"><?= \$p ?></a>
+<a href="?<?= http_build_query(array_merge($_GET, ['page'=>$p])) ?>"><?= $p ?></a>
 <?php endif; ?>
 <?php endfor; ?>
-<?php if(\$pagine_totali > 20): ?>
-<span>... <?= \$pagine_totali ?></span>
+<?php if($pagine_totali > 20): ?>
+<span>... <?= $pagine_totali ?></span>
 <?php endif; ?>
 </div>
 <?php endif; ?>
