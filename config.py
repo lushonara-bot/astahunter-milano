@@ -4,8 +4,8 @@
 
 import os
 
-# Configurazioni API PHP su byethost
-API_BASE_URL = "http://mingcatt.byethost8.com/asta/api"
+# Configurazioni API PHP su Aruba
+API_BASE_URL = "https://www.losreyesdelsabor.it/asta/api"
 API_KEY = "astahunter_milano_2024_secret"
 
 # Città target

@@ -3,10 +3,10 @@
 // AstaHunter Milano - Configurazione Database
 // ============================================
 
-define('DB_HOST', 'sql206.byethost8.com');
-define('DB_USER', 'b8_41171820');
-define('DB_PASS', 'mingcatt05');
-define('DB_NAME', 'b8_41171820_asta');
+define('DB_HOST', '31.11.38.30');
+define('DB_USER', 'Sql1948508');
+define('DB_PASS', 'Turbina05!');
+define('DB_NAME', 'Sql1948508_1');
 
 // Connessione MySQL
 function getDB() {
@@ -21,6 +21,8 @@ function getDB() {
     }
     return $db;
 }
+
+// URL base del sito
 
 // Chiave API semplice per proteggere gli endpoint
 define('API_KEY', 'astahunter_milano_2024_secret');
