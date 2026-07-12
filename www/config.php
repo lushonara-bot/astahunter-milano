@@ -6,7 +6,7 @@
 define('DB_HOST', '31.11.38.30');
 define('DB_USER', 'Sql1948508');
 define('DB_PASS', 'Turbina05!');
-define('DB_NAME', 'Sql1948508_1');
+define('DB_NAME', 'Sql1948508_2');
 
 // Connessione MySQL
 function getDB() {
