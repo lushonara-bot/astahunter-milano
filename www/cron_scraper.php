@@ -16,8 +16,8 @@ set_time_limit(300);
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
-\$DEBUG = isset(\$_GET['debug']) && \$_GET['debug'] == 1;
-if (\$DEBUG) @unlink(__DIR__ . '/debug_html.log'); // Non mostrare errori a schermo
+$DEBUG = isset($_GET['debug']) && $_GET['debug'] == 1;
+if ($DEBUG) @unlink(__DIR__ . '/debug_html.log'); // Non mostrare errori a schermo
 
 require_once __DIR__ . '/config.php';
 
